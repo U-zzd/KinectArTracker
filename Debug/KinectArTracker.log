@@ -1,0 +1,4 @@
+﻿  ar_tracker.cpp
+c:\users\dooms\source\repos\kinectartracker\kinectartracker\ar_tracker.cpp(273): warning C4018: '<': signed/unsigned mismatch
+c:\users\dooms\source\repos\kinectartracker\kinectartracker\ar_tracker.cpp(259): warning C4101: 'result': unreferenced local variable
+LINK : fatal error LNK1104: cannot open file 'kinect20.lib'
