@@ -71,7 +71,7 @@ bool getKinectData(Mat& colorMat)
 
 	if (SUCCEEDED(hr))
 	{
-		cout << "Frame read\n";
+		//cout << "Frame read\n";
 		Mat bufferMat(cColorHeight, cColorWidth, CV_8UC2, pBuffer);
 		cvtColor(bufferMat, colorMat, COLOR_YUV2BGR_YUYV);
 		if (frame) frame->Release();
@@ -233,6 +233,7 @@ int startMonitoring(const Mat& cameraMatrix, const Mat& distanceCoefficients, fl
 {
 	cout << "Monitoring started\n";
 	Mat frame(cColorHeight, cColorWidth, CV_8UC3);
+	Mat flipped(cColorHeight, cColorWidth, CV_8UC3);
 	//Mat frame_gray(cColorHeight, cColorWidth, CV_8UC1);
 	vector<int> markerIds;
 	vector<vector<Point2f>> markerCorners, rejectedCandidates;
@@ -252,17 +253,17 @@ int startMonitoring(const Mat& cameraMatrix, const Mat& distanceCoefficients, fl
 			cout << "failed to read\n";
 		}
 
-		//cvtColor(frame, frame_gray, COLOR_BGRA2BGR);
-		aruco::detectMarkers(frame, markerDictionary, markerCorners, markerIds);
+		flip(frame, flipped, 1);
+		aruco::detectMarkers(flipped, markerDictionary, markerCorners, markerIds);
 		aruco::estimatePoseSingleMarkers(markerCorners, arucoSquareDimensions, cameraMatrix, distanceCoefficients, rotationVectors, translationVectors);
-		
+		//aruco::drawDetectedMarkers(flipped, markerCorners, markerIds);
 		for (int i = 0; i < markerIds.size(); i++)
 		{
 			cout << "marker detected\n";
-			aruco::drawAxis(frame, cameraMatrix, distanceCoefficients, rotationVectors[i], translationVectors[i], 0.1f);
+			aruco::drawAxis(flipped, cameraMatrix, distanceCoefficients, rotationVectors[i], translationVectors[i], 0.1f);
 		}
 		
-		imshow("Kinect", frame);
+		imshow("Kinect", flipped);
 		if (waitKey(1000/60) == 27) break;
 	}
 
