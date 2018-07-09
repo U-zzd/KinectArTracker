@@ -55,49 +55,25 @@ bool initKinect()
 	}
 }
 
-bool getKinectData(Mat& data)
+bool getKinectData(Mat& colorMat)
 {
 	IColorFrame* frame = NULL;
 	ColorImageFormat imageFormat = ColorImageFormat_None;
 	HRESULT hr;
-	UINT nBufferSize = 0;
-	RGBQUAD *pBuffer = NULL;
-	RGBQUAD* m_pColorRGBX = new RGBQUAD[1920 * 1080];
-
+	UINT bufferSize = 0;
+	BYTE *pBuffer = nullptr;
 	hr = reader->AcquireLatestFrame(&frame);
 
 	if (SUCCEEDED(hr))
 	{
+		hr = frame->AccessRawUnderlyingBuffer(&bufferSize, &pBuffer); // YUY2
+	}
+
+	if (SUCCEEDED(hr))
+	{
 		cout << "Frame read\n";
-		hr = frame->get_RawColorImageFormat(&imageFormat);
-	}
-
-	if (SUCCEEDED(hr))
-	{
-		cout << "image format read\n";
-		if (imageFormat == ColorImageFormat_Bgra)
-		{
-			hr = frame->AccessRawUnderlyingBuffer(&nBufferSize, reinterpret_cast<BYTE**>(&pBuffer));
-			cout << "Frame color Format 1 \n";
-		}
-		else if (m_pColorRGBX)
-		{
-			pBuffer = m_pColorRGBX;
-			nBufferSize = cColorWidth * cColorHeight * sizeof(RGBQUAD);
-			hr = frame->CopyConvertedFrameDataToArray(nBufferSize, reinterpret_cast<BYTE*>(pBuffer), ColorImageFormat_Bgra);
-			cout << "Frame color Format 2 \n";
-		}
-		else
-		{
-			hr = E_FAIL;
-		}
-	}
-
-	if (SUCCEEDED(hr))
-	{
-		cout << "Writing mat\n";
-		BYTE* bytepImage = reinterpret_cast<BYTE*>(pBuffer);
-		data = Mat(1080, 1920, CV_8UC4, reinterpret_cast<void*>(bytepImage));
+		Mat bufferMat(cColorHeight, cColorWidth, CV_8UC2, pBuffer);
+		cvtColor(bufferMat, colorMat, COLOR_YUV2BGR_YUYV);
 		if (frame) frame->Release();
 		return true;
 	}
@@ -256,8 +232,8 @@ bool loadCameraCalibration(string name, Mat& cameraMatrix, Mat& distanceCoeffici
 int startMonitoring(const Mat& cameraMatrix, const Mat& distanceCoefficients, float arucoSquareDimensions)
 {
 	cout << "Monitoring started\n";
-	Mat frame(cColorHeight, cColorWidth, CV_8UC4);
-	Mat frame_gray(cColorHeight, cColorWidth, CV_8UC1);
+	Mat frame(cColorHeight, cColorWidth, CV_8UC3);
+	//Mat frame_gray(cColorHeight, cColorWidth, CV_8UC1);
 	vector<int> markerIds;
 	vector<vector<Point2f>> markerCorners, rejectedCandidates;
 	aruco::DetectorParameters parameters;
@@ -271,22 +247,22 @@ int startMonitoring(const Mat& cameraMatrix, const Mat& distanceCoefficients, fl
 
 	while (true)
 	{
-		cout << "loop\n";
 		if (!getKinectData(frame))
 		{
 			cout << "failed to read\n";
 		}
 
-		cvtColor(frame, frame_gray, COLOR_BGRA2BGR);
-		aruco::detectMarkers(frame_gray, markerDictionary, markerCorners, markerIds);
+		//cvtColor(frame, frame_gray, COLOR_BGRA2BGR);
+		aruco::detectMarkers(frame, markerDictionary, markerCorners, markerIds);
 		aruco::estimatePoseSingleMarkers(markerCorners, arucoSquareDimensions, cameraMatrix, distanceCoefficients, rotationVectors, translationVectors);
 		
 		for (int i = 0; i < markerIds.size(); i++)
 		{
-			aruco::drawAxis(frame_gray, cameraMatrix, distanceCoefficients, rotationVectors[i], translationVectors[i], 0.1f);
+			cout << "marker detected\n";
+			aruco::drawAxis(frame, cameraMatrix, distanceCoefficients, rotationVectors[i], translationVectors[i], 0.1f);
 		}
 		
-		imshow("Kinect", frame_gray);
+		imshow("Kinect", frame);
 		if (waitKey(1000/60) == 27) break;
 	}
 
@@ -363,6 +339,7 @@ void cameraCalibrationProcess(Mat& cameraMatrix, Mat& distanceCoefficients)
 
 int main(int argc, char** argv)
 {
+	//setUseOptimized(true);
 	// it takes the kinect a while to be ready
 	initKinect();
 	Sleep(6000);
