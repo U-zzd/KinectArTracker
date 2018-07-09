@@ -256,7 +256,8 @@ bool loadCameraCalibration(string name, Mat& cameraMatrix, Mat& distanceCoeffici
 int startMonitoring(const Mat& cameraMatrix, const Mat& distanceCoefficients, float arucoSquareDimensions)
 {
 	cout << "Monitoring started\n";
-	Mat frame;
+	Mat frame(cColorHeight, cColorWidth, CV_8UC4);
+	Mat frame_gray(cColorHeight, cColorWidth, CV_8UC1);
 	vector<int> markerIds;
 	vector<vector<Point2f>> markerCorners, rejectedCandidates;
 	aruco::DetectorParameters parameters;
@@ -272,19 +273,21 @@ int startMonitoring(const Mat& cameraMatrix, const Mat& distanceCoefficients, fl
 	{
 		cout << "loop\n";
 		if (!getKinectData(frame))
-			cout << "failed to read\n";
-			break;
-
-		aruco::detectMarkers(frame, markerDictionary, markerCorners, markerIds);
-		aruco::estimatePoseSingleMarkers(markerCorners, arucoSquareDimensions, cameraMatrix, distanceCoefficients, rotationVectors, translationVectors);
-
-		for (int i = 0; i < markerIds.size(); i++)
 		{
-			aruco::drawAxis(frame, cameraMatrix, distanceCoefficients, rotationVectors[i], translationVectors[i], 0.1f);
+			cout << "failed to read\n";
 		}
 
-		imshow("Kinect", frame);
-		//if (waitKey(30) == 27) break;
+		cvtColor(frame, frame_gray, COLOR_BGRA2BGR);
+		aruco::detectMarkers(frame_gray, markerDictionary, markerCorners, markerIds);
+		aruco::estimatePoseSingleMarkers(markerCorners, arucoSquareDimensions, cameraMatrix, distanceCoefficients, rotationVectors, translationVectors);
+		
+		for (int i = 0; i < markerIds.size(); i++)
+		{
+			aruco::drawAxis(frame_gray, cameraMatrix, distanceCoefficients, rotationVectors[i], translationVectors[i], 0.1f);
+		}
+		
+		imshow("Kinect", frame_gray);
+		if (waitKey(1000/60) == 27) break;
 	}
 
 	return 1;
